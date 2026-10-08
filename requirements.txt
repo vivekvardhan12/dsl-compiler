@@ -5,3 +5,4 @@
 pandas>=2.2       # runs the generated data operations (read CSV, filter, sort, avg)
 matplotlib>=3.9   # draws charts for the optional 'plot' command
 pytest>=8.0       # runs our automated tests
+pytest-cov>=6.0   # measures test coverage (which lines the tests run)

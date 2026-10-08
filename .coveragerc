@@ -1,0 +1,24 @@
+# .coveragerc - settings for coverage.py (used by `pytest --cov`).
+# Coverage measures which lines of src/ the tests actually execute.
+
+[run]
+# Only measure our own code, not pandas or the tests themselves.
+source = src
+# Branch coverage: for every `if`, check that BOTH the True and False
+# paths were taken - stricter than just counting lines.
+branch = True
+
+[report]
+# List the line numbers that were never executed.
+show_missing = True
+# Fail the test run if total coverage drops below this percentage.
+# CI uses this to stop untested code from being merged.
+fail_under = 95
+# Lines that never run during tests by design:
+exclude_also =
+    # the "run this file directly" entry point
+    if __name__ == .__main__.:
+
+[html]
+# `pytest --cov --cov-report=html` writes a browsable report here.
+directory = htmlcov
