@@ -22,7 +22,7 @@ a small data-analysis language into Python/pandas code and runs it.
 - [x] Step 1 - Lexer (`python src/lexer.py examples/analysis.dsl`)
 - [x] Step 2 - Parser (`python src/parser.py examples/analysis.dsl`)
 - [x] Step 3 - Semantic analysis (`python src/semantic.py examples/analysis.dsl`)
-- [ ] Step 4 - Code generation
+- [x] Step 4 - Code generation (`python src/codegen.py examples/analysis.dsl`)
 - [ ] Step 5 - Compiler driver (main.py)
 - [ ] Step 6 - Optimizer
 - [ ] Step 7 - Tests
