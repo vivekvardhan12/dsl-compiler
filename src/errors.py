@@ -67,3 +67,13 @@ class LexerError(DSLError):
     """Raised when the lexer finds text it cannot turn into a token."""
 
     phase = "Lexer"
+
+
+class ParseError(DSLError):
+    """Raised when the tokens don't follow the grammar rules.
+
+    Example: 'filter > 60' - the parser expected a column name after
+    'filter' but found '>'.
+    """
+
+    phase = "Syntax"
