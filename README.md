@@ -24,7 +24,7 @@ a small data-analysis language into Python/pandas code and runs it.
 - [x] Step 3 - Semantic analysis (`python src/semantic.py examples/analysis.dsl`)
 - [x] Step 4 - Code generation (`python src/codegen.py examples/analysis.dsl`)
 - [x] Step 5 - Compiler driver (`python src/main.py examples/analysis.dsl`)
-- [ ] Step 6 - Optimizer
+- [x] Step 6 - Optimizer (`python src/main.py examples/optimize_demo.dsl --opt`)
 - [ ] Step 7 - Tests
 - [ ] Step 8 - Documentation
 

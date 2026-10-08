@@ -134,6 +134,26 @@ class PlotNode(Node):
 
 
 @dataclass
+class CombinedFilterNode(Node):
+    """Several filters merged into one by the optimizer (Step 6).
+
+    The user never writes this directly. When the optimizer sees
+        filter marks > 60
+        filter city == "Hyderabad"
+    it replaces both with ONE CombinedFilterNode, so the generated code
+    scans the table once instead of twice:
+        df = df[(df['marks'] > 60) & (df['city'] == 'Hyderabad')]
+
+    Attributes:
+        conditions: the original FilterNodes, in order (all must be true)
+    """
+
+    conditions: list
+    line: int = 0
+    col: int = 0
+
+
+@dataclass
 class Program(Node):
     """The root of the tree: the whole program is a list of statements."""
 
@@ -162,6 +182,10 @@ def describe_node(node) -> str:
         return f"Print({node.function}({node.column}))"
     if isinstance(node, PlotNode):
         return f"Plot(kind={node.kind}, x={node.x_column}, y={node.y_column})"
+    if isinstance(node, CombinedFilterNode):
+        # Reuse the Filter description for each condition, joined with AND.
+        parts = [describe_node(condition)[len("Filter("):-1] for condition in node.conditions]
+        return f"Filter({' AND '.join(parts)})"
     return repr(node)
 
 

@@ -42,6 +42,7 @@ import os
 import sys
 
 from ast_nodes import (
+    CombinedFilterNode,
     FilterNode,
     LoadNode,
     PlotNode,
@@ -62,6 +63,22 @@ AGGREGATE_METHODS = {
     "min": "min",
     "max": "max",
 }
+
+
+def strip_dsl_comment(line: str) -> str:
+    """Remove a trailing '# comment' from a DSL line, then trim spaces.
+
+    A '#' inside double quotes is part of a string, not a comment:
+        filter tag == "#1"   # top     ->   filter tag == "#1"
+    so we walk the characters and remember whether we're inside quotes.
+    """
+    inside_string = False
+    for index, char in enumerate(line):
+        if char == '"':
+            inside_string = not inside_string
+        elif char == "#" and not inside_string:
+            return line[:index].strip()
+    return line.strip()
 
 
 class CodeGenerator:
@@ -118,6 +135,7 @@ class CodeGenerator:
             ShowNode: self._gen_show,
             PrintNode: self._gen_print,
             PlotNode: self._gen_plot,
+            CombinedFilterNode: self._gen_combined_filter,
         }
 
         for node in program.statements:
@@ -128,11 +146,25 @@ class CodeGenerator:
         return "\n".join(lines).rstrip() + "\n"
 
     def _source_comment(self, node) -> str:
-        """Return a comment like '# line 5: filter marks > 60'."""
-        if 1 <= node.line <= len(self.source_lines):
-            original = self.source_lines[node.line - 1].strip()
+        """Return a comment like '# line 5: filter marks > 60'.
+
+        A CombinedFilterNode came from several source lines, so its comment
+        lists all of them: '# lines 5, 7 (merged by optimizer): ... | ...'.
+        """
+        if isinstance(node, CombinedFilterNode):
+            line_numbers = ", ".join(str(condition.line) for condition in node.conditions)
+            originals = " | ".join(self._original_line(condition.line) for condition in node.conditions)
+            return f"# lines {line_numbers} (merged by optimizer): {originals}"
+        original = self._original_line(node.line)
+        if original:
             return f"# line {node.line}: {original}"
         return f"# line {node.line}"
+
+    def _original_line(self, line_number: int) -> str:
+        """Return the DSL text of a line without its # comment, or '' if out of range."""
+        if 1 <= line_number <= len(self.source_lines):
+            return strip_dsl_comment(self.source_lines[line_number - 1])
+        return ""
 
     # ------------------------------------------------------------------
     # One template per node type. Each returns a LIST of Python lines.
@@ -149,6 +181,18 @@ class CodeGenerator:
         df[mask] keeps only the True rows.
         """
         return [f"df = df[df[{node.column!r}] {node.operator} {node.value!r}]"]
+
+    def _gen_combined_filter(self, node: CombinedFilterNode) -> list:
+        """Merged filters  ->  ONE boolean index with every condition AND-ed.
+
+        In pandas, & means element-wise AND for masks. Each condition needs
+        its own brackets because & binds more tightly than > or ==.
+        """
+        masks = [
+            f"(df[{condition.column!r}] {condition.operator} {condition.value!r})"
+            for condition in node.conditions
+        ]
+        return [f"df = df[{' & '.join(masks)}]"]
 
     def _gen_select(self, node: SelectNode) -> list:
         """select a, b  ->  keep only these columns (double brackets = list of columns)."""

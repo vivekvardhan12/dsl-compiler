@@ -8,7 +8,7 @@ The COMPILER DRIVER: one command that runs every phase in order.
     analysis.dsl --> [1 Lexer] --> tokens
                  --> [2 Parser] --> AST
                  --> [3 Semantic analysis] --> checked AST + warnings
-                 --> [4 Optimizer]  (added in Step 6)
+                 --> [4 Optimizer] --> smaller, faster AST
                  --> [5 Code generator] --> output/analysis.py
                  --> run output/analysis.py with Python
 
@@ -20,8 +20,11 @@ Options (great for showing each phase during a demo or viva):
     --tokens     print the token list            (Phase 1 output)
     --ast        print the syntax tree           (Phase 2 output)
     --symbols    print the symbol table per line (Phase 3 output)
+    --opt        print what the optimizer changed and the optimized AST
+                                                 (Phase 4 output)
     --code       print the generated Python      (Phase 5 output)
-    --all        all four of the above
+    --all        all five of the above
+    --no-optimize  skip Phase 4 (compare with/without, like gcc -O0)
     --no-run     only compile; don't run the generated script
     -o DIR       folder for generated files (default: output)
 
@@ -42,6 +45,7 @@ from ast_nodes import print_tree
 from codegen import CodeGenerator
 from errors import DSLError
 from lexer import Lexer, print_tokens
+from optimizer import Optimizer
 from parser import Parser
 from semantic import SemanticAnalyzer
 
@@ -60,8 +64,10 @@ def build_argument_parser() -> argparse.ArgumentParser:
     arg_parser.add_argument("--tokens", action="store_true", help="print the tokens (lexer output)")
     arg_parser.add_argument("--ast", action="store_true", help="print the syntax tree (parser output)")
     arg_parser.add_argument("--symbols", action="store_true", help="print the symbol table after each statement")
+    arg_parser.add_argument("--opt", action="store_true", help="print optimizer changes and the optimized AST")
     arg_parser.add_argument("--code", action="store_true", help="print the generated Python code")
-    arg_parser.add_argument("--all", action="store_true", help="same as --tokens --ast --symbols --code")
+    arg_parser.add_argument("--all", action="store_true", help="same as --tokens --ast --symbols --opt --code")
+    arg_parser.add_argument("--no-optimize", action="store_true", help="skip the optimizer (Phase 4)")
     arg_parser.add_argument("--no-run", action="store_true", help="compile only; do not run the generated script")
     arg_parser.add_argument("-o", "--output-dir", default="output", help="folder for generated files (default: output)")
     return arg_parser
@@ -88,6 +94,7 @@ class CompilerDriver:
         self.show_tokens = options.tokens or show_all
         self.show_ast = options.ast or show_all
         self.show_symbols = options.symbols or show_all
+        self.show_optimizer = options.opt or show_all
         self.show_code = options.code or show_all
         self.timings = []  # (phase name, milliseconds) for the summary
 
@@ -130,7 +137,21 @@ class CompilerDriver:
             print(f"Warning: {warning}")
 
         # ---- Phase 4: Optimization ------------------------------------
-        # (Added in Step 6.)
+        optimization_count = 0
+        if self.options.no_optimize:
+            if self.show_optimizer:
+                print_heading("Phase 4: Optimization")
+                print("Skipped (--no-optimize).")
+        else:
+            optimizer = Optimizer()
+            program = self._timed("Optimizer", optimizer.optimize, program)
+            optimization_count = len(optimizer.report)
+            if self.show_optimizer:
+                print_heading("Phase 4: Optimization")
+                for message in optimizer.report or ["No changes - the program is already optimal."]:
+                    print(f"- {message}")
+                print("\nOptimized AST:")
+                print_tree(program)
 
         # ---- Phase 5: Code generation ---------------------------------
         generator = CodeGenerator(source_code, source_path, self.options.output_dir)
@@ -145,6 +166,13 @@ class CompilerDriver:
         phase_summary = ", ".join(f"{name} {ms:.1f}ms" for name, ms in self.timings)
         print_heading("Compiled successfully")
         print(f"{len(tokens)} tokens, {len(program.statements)} statements -> {output_path}")
+        if self.options.no_optimize:
+            print("Optimizer: off (--no-optimize)")
+        else:
+            hint = ""
+            if optimization_count > 0 and not self.show_optimizer:
+                hint = " - use --opt to see them"
+            print(f"Optimizer: {optimization_count} change(s){hint}")
         print(f"Time: {total_ms:.1f} ms ({phase_summary})")
         return output_path
 

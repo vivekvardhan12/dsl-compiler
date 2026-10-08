@@ -128,3 +128,26 @@ def test_plot_program_end_to_end(workdir, capfd):
     program = 'load "data.csv"\nplot bar name marks\n'
     assert main([write_program(workdir, program)]) == 0
     assert (workdir / "output" / "prog_plot_line2.png").exists()
+
+
+WASTEFUL_PROGRAM = 'load "data.csv"\nsort name\nfilter marks > 60\nshow\nsort marks\n'
+
+
+def test_opt_flag_prints_optimizer_report(workdir, capfd):
+    main([write_program(workdir, WASTEFUL_PROGRAM), "--opt", "--no-run"])
+    output = capfd.readouterr().out
+    assert "Phase 4: Optimization" in output
+    assert "Dead code: removed Sort(column=marks, asc)" in output
+    assert "Optimized AST:" in output
+
+
+def test_no_optimize_keeps_every_statement(workdir, capfd):
+    path = write_program(workdir, WASTEFUL_PROGRAM)
+    main([path, "--no-run", "--no-optimize"])
+    unoptimized = (workdir / "output" / "prog.py").read_text(encoding="utf-8")
+    main([path, "--no-run"])
+    optimized = (workdir / "output" / "prog.py").read_text(encoding="utf-8")
+    output = capfd.readouterr().out
+    assert "Optimizer: off (--no-optimize)" in output
+    assert unoptimized.count("sort_values") == 2
+    assert optimized.count("sort_values") == 1

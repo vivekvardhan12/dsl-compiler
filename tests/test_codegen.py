@@ -21,7 +21,7 @@ matplotlib.use("Agg")
 
 import pytest  # noqa: E402  (import after matplotlib.use is intentional)
 
-from codegen import compile_source  # noqa: E402
+from codegen import compile_source, strip_dsl_comment  # noqa: E402
 
 DATA_CSV = (
     "name,city,marks\n"
@@ -137,3 +137,16 @@ def test_string_values_cannot_inject_code(workdir, capsys):
     output = run_generated(code, capsys)
     assert "HACKED" not in output
     assert "count(name) = 0" in output
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        ("show", "show"),
+        ("  sort marks desc   # newest first", "sort marks desc"),
+        ('filter tag == "#1"   # keep the hash', 'filter tag == "#1"'),
+        ("# whole line comment", ""),
+    ],
+)
+def test_strip_dsl_comment(line, expected):
+    assert strip_dsl_comment(line) == expected
