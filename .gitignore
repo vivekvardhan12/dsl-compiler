@@ -1,0 +1,25 @@
+# .gitignore
+# Tells Git which files NOT to save in version control.
+
+# Python's compiled cache files: auto-regenerated, machine-specific, useless in Git
+__pycache__/
+*.pyc
+
+# pytest's cache folder: created automatically when tests run
+.pytest_cache/
+
+# Generated output scripts: the compiler recreates these every run,
+# so committing them would just add noise
+output/*
+# ...but keep this placeholder so the empty 'output' folder still exists in Git
+!output/.gitkeep
+
+# Editor settings: personal to your machine
+.vscode/
+
+# Secrets (we have none, but it's a good habit to always ignore them)
+.env
+
+# OS junk files
+Thumbs.db
+.DS_Store

@@ -1,0 +1,7 @@
+# requirements.txt
+# Lists every Python package this project needs.
+# Anyone can install them all with: pip install -r requirements.txt
+
+pandas>=2.2       # runs the generated data operations (read CSV, filter, sort, avg)
+matplotlib>=3.9   # draws charts for the optional 'plot' command
+pytest>=8.0       # runs our automated tests
