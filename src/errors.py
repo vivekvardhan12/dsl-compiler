@@ -77,3 +77,15 @@ class ParseError(DSLError):
     """
 
     phase = "Syntax"
+
+
+class SemanticError(DSLError):
+    """Raised when a program is grammatically correct but doesn't make sense.
+
+    Examples:
+        filter salary > 50      - there is no 'salary' column
+        print avg(name)         - can't average a text column
+        show                    - before any 'load', there is no data
+    """
+
+    phase = "Semantic"
